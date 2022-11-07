@@ -1,0 +1,669 @@
+---
+title: "Individual Methods Analysis"
+author: "Lauren Marazzi"
+date: "10/25/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	fig.show = "hold",
+	message = FALSE,
+	warning = FALSE
+)
+library(dplyr)
+library(caret)
+library(ggplot2)
+library(plotly)
+library(RColorBrewer)
+library(heatmaply)
+library(stringr)
+```
+
+# Step1: Compute AUROC and ACC Row Sums and Median values under different weights
+
+We identify the top methods for network structure prediction by computing the area under the receiver operating characteristic (AUROC) and accuracy (ACC) row sum and median values for each of the 28 networks. We weight these variables at 5 different ranges: 
+
+* {Weight~AUC=1~,Weight~AUC=0~}
+* {Weight~AUC=0~,Weight~AUC=1~}
+* {Weight~AUC=0.5~,Weight~AUC=0.5~}
+* {Weight~AUC=0.3~,Weight~AUC=0.7~}
+* {Weight~AUC=0.7~,Weight~AUC=0.3~}
+
+```{r load data}
+for (sim in (1:28)){
+  AUC<-read.csv(paste0("sim",sim,"/Combined_Data_onlyAUC.csv"),row.names = 1)
+  ACC<-read.csv(paste0("sim",sim,"/Combined_Data_onlyACC.csv"),row.names = 1)
+
+  #calculate AUC only sums and medians
+  AUC_sum<-cbind(AUC$Method_name,rowSums(AUC[,-1])) %>% as.data.frame()
+  colnames(AUC_sum)<-c("Method_name","Sum_of_avg_across_patients")
+  AUC_sum$Sum_of_avg_across_patients<-as.numeric(AUC_sum$Sum_of_avg_across_patients)
+
+  AUC_median<-cbind(AUC$Method_name,apply(AUC[-1], 1, median)) %>% as.data.frame()
+  colnames(AUC_median)<-c("Method_name","Median_across_patients")
+
+  write.csv(AUC_sum,paste0('sim',sim,'/Combined_data_sums_onlyAUC.csv'),quote=F)
+  write.csv(AUC_median,paste0('sim',sim,'/Combined_data_median_onlyAUC.csv'),quote=F)
+
+  #calculate ACC only sums and medians
+  ACC_sum<-cbind(ACC$Method_name,rowSums(ACC[,-1])) %>% as.data.frame()
+  colnames(ACC_sum)<-c("Method_name","Sum_of_avg_across_patients")
+  ACC_sum$Sum_of_avg_across_patients<-as.numeric(ACC_sum$Sum_of_avg_across_patients)
+
+
+  ACC_median<-cbind(ACC$Method_name,apply(ACC[-1], 1, median)) %>% as.data.frame()
+  colnames(ACC_median)<-c("Method_name","Median_across_patients")
+
+  write.csv(ACC_sum,paste0('sim',sim,'/Combined_data_sums_onlyACC.csv'),quote=F)
+  write.csv(ACC_median,paste0('sim',sim,'/Combined_data_median_onlyACC.csv'),quote=F)
+
+  #  calculate equal weights sums and medians
+  AUC_half<-cbind(sapply(AUC[,-1],"*",0.5))
+  ACC_half<-cbind(sapply(ACC[,-1],"*",0.5))
+  equal<-cbind( AUC_half + ACC_half)
+
+
+  equal_sum<-cbind(AUC$Method_name,rowSums(equal)) %>% as.data.frame()
+  colnames(equal_sum)<-c("Method_name","Sum_of_avg_across_patients")
+  equal_sum$Sum_of_avg_across_patients<-as.numeric(equal_sum$Sum_of_avg_across_patients)
+
+  equal_median<-cbind(AUC$Method_name,apply(equal, 1, median)) %>% as.data.frame()
+  colnames(equal_median)<-c("Method_name","Median_across_patients")
+
+
+  write.csv(equal,paste0('sim',sim,'/Combined_data_equal.csv'),quote=F)
+  write.csv(equal_sum,paste0('sim',sim,'/Combined_data_sums_equal.csv'),quote=F)
+  write.csv(equal_median,paste0('sim',sim,'/Combined_data_median_equal.csv'),quote=F)
+
+
+  #calculate 0.3 AUROC and 0.7 ACC weights sums and medians
+  AUC_low<-cbind(sapply(AUC[,-1],"*",0.3))
+  ACC_high<-cbind(sapply(ACC[,-1],"*",0.7))
+  three_seven<-cbind( AUC_low + ACC_high)
+
+
+  three_seven_sum<-cbind(AUC$Method_name,rowSums(three_seven)) %>% as.data.frame()
+  colnames(three_seven_sum)<-c("Method_name","Sum_of_avg_across_patients")
+  three_seven_sum$Sum_of_avg_across_patients<-as.numeric(three_seven_sum$Sum_of_avg_across_patients)
+
+  three_seven_median<-cbind(AUC$Method_name,apply(three_seven, 1, median)) %>% as.data.frame()
+  colnames(three_seven_median)<-c("Method_name","Median_across_patients")
+
+  write.csv(three_seven,paste0('sim',sim,'/Combined_data_37.csv'),quote=F)
+  write.csv(three_seven_sum,paste0('sim',sim,'/Combined_data_sums_37.csv'),quote=F)
+  write.csv(three_seven_median,paste0('sim',sim,'/Combined_data_median_37.csv'),quote=F)
+
+  #calculate 0.7 AUROC and 0.3 ACC weights sums and medianssums and medians}
+  AUC_high<-cbind(sapply(AUC[,-1],"*",0.7))
+  ACC_low<-cbind(sapply(ACC[,-1],"*",0.3))
+  seven_three<-cbind( AUC_low + ACC_high)
+
+  seven_three_sum<-cbind(AUC$Method_name,rowSums(seven_three)) %>% as.data.frame()
+  colnames(seven_three_sum)<-c("Method_name","Sum_of_avg_across_patients")
+  seven_three_sum$Sum_of_avg_across_patients<-as.numeric(seven_three_sum$Sum_of_avg_across_patients)
+
+
+  seven_three_median<-cbind(AUC$Method_name,apply(seven_three, 1, median)) %>% as.data.frame()
+  colnames(seven_three_median)<-c("Method_name","Median_across_patients")
+
+  write.csv(seven_three,paste0('sim',sim,'/Combined_data_73.csv'),quote=F)
+  write.csv(seven_three_sum,paste0('sim',sim,'/Combined_data_sums_73.csv'),quote=F)
+  write.csv(seven_three_median,paste0('sim',sim,'/Combined_data_median_73.csv'),quote=F)
+}
+```
+
+# Step2: Compute Average Row Sums and Median values under different weights
+
+Next, we compute the average Row Sums and Median values under the 5 AUROC and ACC weights.
+
+```{r average of sums}
+patterns<-c("Combined_data_sums_onlyAUC","Combined_data_sums_onlyACC","Combined_data_sums_equal","Combined_data_sums_37","Combined_data_sums_73")
+
+dir.create("averages")
+
+for (pattern in patterns){
+  count_files <- list.files(recursive=TRUE,pattern=paste0("^",pattern,".csv"),full.names=TRUE)
+  d1<-data.frame()
+  for (i in count_files) {
+    # read file i as a data frame
+    f <- read.csv(i,row.names = 1)
+    if(length(d1) == 0){
+      d1 <- f
+    }else
+    {
+     d1$Sum_of_avg_across_patients<-d1$Sum_of_avg_across_patients+f$Sum_of_avg_across_patients
+    }
+  }
+    d1$Sum_of_avg_across_patients<-d1$Sum_of_avg_across_patients/28
+    d1$Sum_of_avg_across_patients<-d1$Sum_of_avg_across_patients/50
+    d1<- d1 %>% arrange(desc(Sum_of_avg_across_patients))
+    write.csv(d1,paste0("averages/Average_",pattern,".csv"),quote=F)
+}
+
+
+```
+
+```{r average of medians, message=FALSE, warning=FALSE}
+patterns<-c("Combined_data_median_onlyAUC","Combined_data_median_onlyACC","Combined_data_median_equal","Combined_data_median_37","Combined_data_median_73")
+
+for (pattern in patterns){
+  count_files <- list.files(recursive=TRUE,pattern=paste0("^",pattern,".csv"),full.names=TRUE)
+  count_files<-count_files[!grepl("all", count_files)]
+  d1<-data.frame()
+  for (i in count_files) {
+    # read file i as a data frame
+    f <- read.csv(i,row.names = 1)
+    if(length(d1) == 0){
+      d1 <- f
+    }else
+    {
+     d1$Median_across_patients<-d1$Median_across_patients+f$Median_across_patients
+    }
+  }
+    d1$Median_across_patients<-d1$Median_across_patients/28
+    d1<- d1 %>% arrange(desc(Median_across_patients))
+    write.csv(d1,paste0("averages/Average_Median_",pattern,".csv"),quote=F)
+}
+rm(list = ls())
+```
+
+# Step3: Generate heatmaps of Average Row Sums and Median values under different weights
+
+To identify the top performing network methods across all 28 networks and under different weights of the AUROC and ACC, we generate a heatmap with hierarchical clustering
+
+```{r heatmaps rowsums, message=FALSE, warning=FALSE}
+pal<-rev(c("#FF0000","#0b5394","#38761d","#ffe700","#FFFFFF"))
+count_files <- list.files(path="averages",recursive=TRUE,pattern=paste0("Average_Combined"),full.names=TRUE)
+
+d1<-data.frame()
+for (i in count_files){
+  f<-read.csv(i,row.names = 1)
+
+  if(length(d1) == 0){
+    d1<-f
+  }
+  else{
+    d1<- merge(d1, f, by.x = "Method_name", by.y = "Method_name")
+  }
+
+  }
+
+
+rownames(d1)<-d1$Method_name
+colnames(d1)<-c("Method_name","AUC=0.3,ACC=0.7","AUC=0.7,ACC=0.3","AUC=0.5,ACC=0.5","AUC=0,ACC=1","AUC=1,ACC=0")
+d1<- d1 %>% select(-Method_name)
+
+
+rowsums_top10<-rownames(d1 %>% arrange(desc(`AUC=0.5,ACC=0.5`)))[1:10]
+rowsums_top4<-rownames(d1 %>% arrange(desc(`AUC=0.5,ACC=0.5`)))[1:4]
+
+heatmaply(d1,colors = pal,show_dendrogram = c(TRUE, FALSE),labCol=c("Weight<sub>AUC=0.3</sub>,Weight<sub>ACC=0.7</sub>","Weight<sub>AUC=0.7</sub>,Weight<sub>ACC=0.3</sub>","Weight<sub>AUC=0.5</sub>,Weight<sub>ACC=0.5</sub>","Weight<sub>AUC=0</sub>,Weight<sub>ACC=1</sub>","Weight<sub>AUC=1</sub>,Weight<sub>ACC=0</sub>"),main="Average Row Sums Value across 28 Networks",file = "heatmap_rowsums.pdf",width=800,height=1000,margins = c(40, 50)) %>%
+layout(height = 900)
+
+```
+
+
+<br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
+```{r heatmaps median, message=FALSE, warning=FALSE}
+
+patterns<-c("Combined_data_median_onlyAUC","Combined_data_median_onlyACC","Combined_data_median_equal","Combined_data_median_37","Combined_data_median_73")
+
+count_files <- list.files(path="averages",recursive=TRUE,pattern=paste0("Average_Median"),full.names=TRUE)
+
+d1<-data.frame()
+for (i in count_files){
+  f<-read.csv(i,row.names = 1)
+
+  if(length(d1) == 0){
+    d1<-f
+  }
+  else{
+    d1<- merge(d1, f, by.x = "Method_name", by.y = "Method_name")
+  }
+
+  }
+
+
+rownames(d1)<-d1$Method_name
+colnames(d1)<-c("Method_name","AUC=0.3,ACC=0.7","AUC=0.7,ACC=0.3","AUC=0.5,ACC=0.5","AUC=0,ACC=1","AUC=1,ACC=0")
+d1<- d1 %>% select(-Method_name)
+
+medians_top10<-rownames(d1 %>% arrange(desc(`AUC=0.5,ACC=0.5`)))[1:10]
+medians_top4<-rownames(d1 %>% arrange(desc(`AUC=0.5,ACC=0.5`)))[1:4]
+
+heatmaply(d1,colors = pal,show_dendrogram = c(TRUE, FALSE),labCol=c("Weight<sub>AUC=0.3</sub>,Weight<sub>ACC=0.7</sub>","Weight<sub>AUC=0.7</sub>,Weight<sub>ACC=0.3</sub>","Weight<sub>AUC=0.5</sub>,Weight<sub>ACC=0.5</sub>","Weight<sub>AUC=0</sub>,Weight<sub>ACC=1</sub>","Weight<sub>AUC=1</sub>,Weight<sub>ACC=0</sub>"),main="Average Median Value across 28 Networks",file = "heatmap_medians.pdf",width=800,height=1000,margins = c(40, 50))  %>%
+  layout(height = 900)
+
+```
+<br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
+
+These heatmaps show that the top methods across all networks with all weights of AUROC and ACC are BCohF, BCorrU, PCohF, and Tigress
+
+# Step4: Generate line plots of Average Row Sums and Median AUROC and ACC values under different weights
+
+We can plot how the individual top methods perform in all 28 networks individually using line plots under different weights of AUROC and ACC
+
+
+```{r rowsums top4 lineplot function}
+create_rowsum_lineplot<-function(pattern){
+  count_files <- list.files(recursive=T,pattern=paste0("^",pattern),full.names=TRUE)
+  d1<-data.frame()
+  for (i in count_files) {
+    f <- read.csv(i,row.names = 1) %>% filter(Method_name %in% rowsums_top4)
+    f<- cbind(f,c(rep(unlist(strsplit(i,'/'))[2],nrow(f))))
+    colnames(f)[3]<-c('time_series')
+
+    #if the counts object is empty just copy the f to m
+    if(length(d1) == 0){
+      d1 <- f
+
+    } else
+    {
+      #if the dataframe is not empty then merge the data
+      d1 <- rbind(d1,f)
+    }
+  }
+
+  d1$time_series<-gsub("sim","",d1$time_series)
+  d1$time_series<-str_pad(d1$time_series, 2, pad = "0")
+  colnames(d1)<-c("Method","Row Sum","Network")
+  d1$`Row Sum`<-d1$`Row Sum`/50
+
+  return(d1)
+}
+
+
+```
+
+```{r line plots top 4 rowsums, include=FALSE}
+pal<-c("#8dd3c7","#bebada","#80b1d3","#fccde5")
+
+#onlyAUC
+pattern<-"Combined_data_sums_onlyAUC.csv"
+d1<-create_rowsum_lineplot(pattern)
+p<-ggplot(d1, aes(x=Network, y=`Row Sum`,group=Method,color=Method)) + geom_line() + ggtitle("Row Sums Weight<sub>AUC=1</sub>, Weight<sub>ACC=0</sub> for Top 4 Methods across Networks")+scale_color_manual(values=pal)
+
+p1<-ggplotly(p)
+export(p1, file = "lineplot_RowSums_Top4_AUConly.pdf")
+```
+
+```{r plot 1, echo=FALSE}
+ggplotly(p) %>%  layout(autosize = F, width = 900, height = 500)
+```
+
+```{r line plot 2, include=FALSE}
+#onlyACC
+pattern<-"Combined_data_sums_onlyACC.csv"
+d1<-create_rowsum_lineplot(pattern)
+p<-ggplot(d1, aes(x=Network, y=`Row Sum`,group=Method,color=Method)) + geom_line() + ggtitle("Row Sums Weight<sub>AUC=0</sub>, Weight<sub>ACC=1</sub> for Top 4 Methods across Networks")+scale_color_manual(values=pal)
+
+p1<-ggplotly(p)
+export(p1, file = "lineplot_RowSums_Top4_ACConly.pdf")
+```
+
+```{r plot 2, echo=FALSE}
+ggplotly(p) %>%  layout(autosize = F, width = 900, height = 500)
+```
+
+```{r line plot 3, include=FALSE}
+
+#equal weights
+pattern<-"Combined_data_sums_equal.csv"
+d1<-create_rowsum_lineplot(pattern)
+p<-ggplot(d1, aes(x=Network, y=`Row Sum`,group=Method,color=Method)) + geom_line() + ggtitle("Row Sums Weight<sub>AUC=0.5</sub>, Weight<sub>ACC=0.5</sub> for Top 4 Methods across Networks")+scale_color_manual(values=pal)
+
+p1<-ggplotly(p)
+export(p1, file = "lineplot_RowSums_Top4_equal.pdf")
+
+```
+
+```{r plot 3, echo=FALSE}
+ggplotly(p) %>%  layout(autosize = F, width = 900, height = 500)
+```
+
+```{r line plot 4, include=FALSE}
+#AUC=0.3, ACC=0.7 weights
+pattern<-"Combined_data_sums_37.csv"
+d1<-create_rowsum_lineplot(pattern)
+p<-ggplot(d1, aes(x=Network, y=`Row Sum`,group=Method,color=Method)) + geom_line() + ggtitle("Row Sums Weight<sub>AUC=0.3</sub>, Weight<sub>ACC=0.7</sub> for Top 4 Methods across Networks")+scale_color_manual(values=pal)
+
+p1<-ggplotly(p)
+export(p1, file = "lineplot_RowSums_Top4_37.pdf")
+```
+
+```{r plot 4,echo=FALSE}
+ggplotly(p) %>%  layout(autosize = F, width = 900, height = 500)
+```
+
+```{r line plot 5,include=FALSE}
+#AUC=0.7, ACC=0.3 weights
+pattern<-"Combined_data_sums_73.csv"
+d1<-create_rowsum_lineplot(pattern)
+p<-ggplot(d1, aes(x=Network, y=`Row Sum`,group=Method,color=Method)) + geom_line() + ggtitle("Row Sums Weight<sub>AUC=0.7</sub>, Weight<sub>ACC=0.3</sub> for Top 4 Methods across Networks")+scale_color_manual(values=pal)
+p1<-ggplotly(p)
+export(p1, file = "lineplot_RowSums_Top4_73.pdf")
+```
+
+```{r plot 5, echo=FALSE}
+ggplotly(p) %>%  layout(autosize = F, width = 900, height = 500)
+```
+
+
+```{r median top4 lineplot function}
+create_median_lineplot<-function(pattern){
+  count_files <- list.files(recursive=T,pattern=paste0("^",pattern),full.names=TRUE)
+  d1<-data.frame()
+  for (i in count_files) {
+    f <- read.csv(i,row.names = 1) %>% filter(Method_name %in% rowsums_top4)
+    f<- cbind(f,c(rep(unlist(strsplit(i,'/'))[2],nrow(f))))
+    colnames(f)[3]<-c('time_series')
+
+    #if the counts object is empty just copy the f to m
+    if(length(d1) == 0){
+      d1 <- f
+
+    } else
+    {
+      #if the dataframe is not empty then merge the data
+      d1 <- rbind(d1,f)
+    }
+  }
+
+  d1$time_series<-gsub("sim","",d1$time_series)
+  d1$time_series<-str_pad(d1$time_series, 2, pad = "0")
+  colnames(d1)<-c("Method","Median","Network")
+
+  return(d1)
+}
+
+
+```
+
+```{r line plots top 4 median, include=FALSE}
+
+#onlyAUC
+pattern<-"Combined_data_median_onlyAUC.csv"
+d1<-create_median_lineplot(pattern)
+p<-ggplot(d1, aes(x=Network, y=Median,group=Method,color=Method)) + geom_line() + ggtitle("Medians Weight<sub>AUC=1</sub>, Weight<sub>ACC=0</sub> for Top 4 Methods across Networks")+scale_color_manual(values=pal)
+
+p1<-ggplotly(p)
+export(p1, file = "lineplot_Median_Top4_AUConly.pdf")
+```
+
+```{r plot 6, echo=FALSE}
+ggplotly(p) %>%  layout(autosize = F, width = 900, height = 500)
+```
+
+```{r lineplot 7, include=FALSE}
+#onlyACC
+pattern<-"Combined_data_median_onlyACC.csv"
+d1<-create_median_lineplot(pattern)
+p<-ggplot(d1, aes(x=Network, y=Median,group=Method,color=Method)) + geom_line() + ggtitle("Medians Weight<sub>AUC=0</sub>, Weight<sub>ACC=1</sub> for Top 4 Methods across Networks")+scale_color_manual(values=pal)
+p1<-ggplotly(p)
+export(p1, file = "lineplot_Median_Top4_ACConly.pdf")
+```
+
+```{r plot 7, echo=FALSE}
+ggplotly(p) %>%  layout(autosize = F, width = 900, height = 500)
+```
+
+```{r lineplot 8, include=FALSE}
+#equal weights
+pattern<-"Combined_data_median_equal.csv"
+d1<-create_median_lineplot(pattern)
+p<-ggplot(d1, aes(x=Network, y=Median,group=Method,color=Method)) + geom_line() + ggtitle("Medians Weight<sub>AUC=0.5</sub>, Weight<sub>ACC=0.5</sub> for Top 4 Methods across Networks")+scale_color_manual(values=pal)
+p1<-ggplotly(p)
+export(p1, file = "lineplot_Median_Top4_equal.pdf")
+```
+
+```{r plot 8, echo=FALSE}
+ggplotly(p) %>%  layout(autosize = F, width = 900, height = 500)
+```
+
+
+```{r lineplot 9, include=FALSE}
+#AUC=0.3, ACC=0.7 weights
+pattern<-"Combined_data_sums_37.csv"
+d1<-create_median_lineplot(pattern)
+p<-ggplot(d1, aes(x=Network, y=Median,group=Method,color=Method)) + geom_line() + ggtitle("Medians Weight<sub>AUC=0.3</sub>, Weight<sub>ACC=0.7</sub> for Top 4 Methods across Networks")+scale_color_manual(values=pal)
+
+p1<-ggplotly(p)
+export(p1, file = "lineplot_Median_Top4_37.pdf")
+```
+
+```{r plot 9, echo=FALSE}
+ggplotly(p) %>%  layout(autosize = F, width = 900, height = 500)
+```
+
+
+```{r lineplot 10, include=FALSE}
+#AUC=0.7, ACC=0.3 weights
+pattern<-"Combined_data_sums_73.csv"
+d1<-create_median_lineplot(pattern)
+p<-ggplot(d1, aes(x=Network, y=Median,group=Method,color=Method)) + geom_line() + ggtitle("Medians Weight<sub>AUC=0.7</sub>, Weight<sub>ACC=0.3</sub> for Top 4 Methods across Networks")+scale_color_manual(values=pal)
+
+p1<-ggplotly(p)
+export(p1, file = "lineplot_Median_Top4_73.pdf")
+```
+
+```{r plot 10, echo=FALSE}
+ggplotly(p) %>%  layout(autosize = F, width = 900, height = 500)
+```
+
+
+## We can plot how the top 4 methods perform against the other top 6 methods in all 28 networks individually using line plots under different weights of AUROC and ACC.
+
+```{r rowsums top10 lineplot function, include=FALSE}
+create_rowsum_lineplot<-function(pattern){
+  count_files <- list.files(recursive=T,pattern=paste0("^",pattern),full.names=TRUE)
+  d1<-data.frame()
+  for (i in count_files) {
+    f <- read.csv(i,row.names = 1) %>% filter(Method_name %in% rowsums_top10)
+    f<- cbind(f,c(rep(unlist(strsplit(i,'/'))[2],nrow(f))))
+    colnames(f)[3]<-c('time_series')
+
+    #if the counts object is empty just copy the f to m
+    if(length(d1) == 0){
+      d1 <- f
+
+    } else
+    {
+      #if the dataframe is not empty then merge the data
+      d1 <- rbind(d1,f)
+    }
+  }
+
+  d1$time_series<-gsub("sim","",d1$time_series)
+  d1$time_series<-str_pad(d1$time_series, 2, pad = "0")
+  colnames(d1)<-c("Method","Row Sum","Network")
+  d1$`Row Sum`<-d1$`Row Sum`/50
+
+  return(d1)
+}
+
+
+```
+
+```{r line plots top 10 rowsums, include=FALSE}
+pal<-c("#8dd3c7","#fb8072","#bebada","#fdb462","#ffed6f","#b3de69","#d9d9d9","#80b1d3","#ffffb3","#fccde5")
+#onlyAUC
+pattern<-"Combined_data_sums_onlyAUC.csv"
+d1<-create_rowsum_lineplot(pattern)
+p<-ggplot(d1, aes(x=Network, y=`Row Sum`,group=Method,color=Method)) + geom_line() + ggtitle("Row Sums Weight<sub>AUC=1</sub>, Weight<sub>ACC=0</sub> for Top 10 Methods across Networks")+scale_color_manual(values=pal)
+
+p1<-ggplotly(p)
+export(p1, file = "lineplot_RowSums_Top10_AUConly.pdf")
+```
+
+```{r plot 11, echo=FALSE}
+ggplotly(p) %>%  layout(autosize = F, width = 900, height = 500)
+```
+
+```{r lineplot 12, include=FALSE}
+#onlyACC
+pattern<-"Combined_data_sums_onlyACC.csv"
+d1<-create_rowsum_lineplot(pattern)
+p<-ggplot(d1, aes(x=Network, y=`Row Sum`,group=Method,color=Method)) + geom_line() + ggtitle("Row Sums Weight<sub>AUC=0</sub>, Weight<sub>ACC=1</sub> for Top 10 Methods across Networks")+scale_color_manual(values=pal)
+
+p1<-ggplotly(p)
+export(p1, file = "lineplot_RowSums_Top10_ACConly.pdf")
+```
+
+```{r plot 12, echo=FALSE}
+ggplotly(p) %>%  layout(autosize = F, width = 900, height = 500)
+```
+
+```{r lineplot 13, include=FALSE}
+#equal weights
+pattern<-"Combined_data_sums_equal.csv"
+d1<-create_rowsum_lineplot(pattern)
+p<-ggplot(d1, aes(x=Network, y=`Row Sum`,group=Method,color=Method)) + geom_line() + ggtitle("Row Sums Weight<sub>AUC=0.5</sub>, Weight<sub>ACC=0.5</sub> for Top 10 Methods across Networks")+scale_color_manual(values=pal)
+
+p1<-ggplotly(p)
+export(p1, file = "lineplot_RowSums_Top10_equal.pdf")
+
+```
+
+```{r plot 13, echo=FALSE}
+ggplotly(p) %>%  layout(autosize = F, width = 900, height = 500)
+```
+
+```{r lineplot 14, include=FALSE}
+#AUC=0.3, ACC=0.7 weights
+pattern<-"Combined_data_sums_37.csv"
+d1<-create_rowsum_lineplot(pattern)
+p<-ggplot(d1, aes(x=Network, y=`Row Sum`,group=Method,color=Method)) + geom_line() + ggtitle("Row Sums Weight<sub>AUC=0.3</sub>, Weight<sub>ACC=0.7</sub> for Top 10 Methods across Networks")+scale_color_manual(values=pal)
+
+p1<-ggplotly(p)
+export(p1, file = "lineplot_RowSums_Top10_37.pdf")
+
+```
+
+```{r plot 14, echo=FALSE}
+ggplotly(p) %>%  layout(autosize = F, width = 900, height = 500)
+```
+
+
+```{r lineplot 15, include=FALSE}
+#AUC=0.7, ACC=0.3 weights
+pattern<-"Combined_data_sums_73.csv"
+d1<-create_rowsum_lineplot(pattern)
+p<-ggplot(d1, aes(x=Network, y=`Row Sum`,group=Method,color=Method)) + geom_line() + ggtitle("Row Sums Weight<sub>AUC=0.7</sub>, Weight<sub>ACC=0.3</sub> for Top 10 Methods across Networks")+scale_color_manual(values=pal)
+
+p1<-ggplotly(p)
+export(p1, file = "lineplot_RowSums_Top10_73.pdf")
+```
+
+
+```{r plot 15, echo=FALSE}
+ggplotly(p) %>%  layout(autosize = F, width = 900, height = 500)
+```
+
+```{r median top10 lineplot function, include=FALSE}
+create_median_lineplot<-function(pattern){
+  count_files <- list.files(recursive=T,pattern=paste0("^",pattern),full.names=TRUE)
+  d1<-data.frame()
+  for (i in count_files) {
+    f <- read.csv(i,row.names = 1) %>% filter(Method_name %in% rowsums_top10)
+    f<- cbind(f,c(rep(unlist(strsplit(i,'/'))[2],nrow(f))))
+    colnames(f)[3]<-c('time_series')
+
+    #if the counts object is empty just copy the f to m
+    if(length(d1) == 0){
+      d1 <- f
+
+    } else
+    {
+      #if the dataframe is not empty then merge the data
+      d1 <- rbind(d1,f)
+    }
+  }
+
+  d1$time_series<-gsub("sim","",d1$time_series)
+  d1$time_series<-str_pad(d1$time_series, 2, pad = "0")
+  colnames(d1)<-c("Method","Median","Network")
+
+  return(d1)
+}
+
+
+```
+
+```{r line plots top 10 median, include=FALSE}
+#onlyAUC
+pattern<-"Combined_data_median_onlyAUC.csv"
+d1<-create_median_lineplot(pattern)
+p<-ggplot(d1, aes(x=Network, y=Median,group=Method,color=Method)) + geom_line() + ggtitle("Medians Weight<sub>AUC=1</sub>, Weight<sub>ACC=0</sub> for Top 10 Methods across Networks")+scale_color_manual(values=pal)
+
+p1<-ggplotly(p)
+export(p1, file = "lineplot_Median_Top10_AUConly.pdf")
+```
+
+```{r plot 16, echo=FALSE}
+ggplotly(p) %>%  layout(autosize = F, width = 900, height = 500)
+```
+
+```{r lineplot 17, include=FALSE}
+
+#onlyACC
+pattern<-"Combined_data_median_onlyACC.csv"
+d1<-create_median_lineplot(pattern)
+p<-ggplot(d1, aes(x=Network, y=Median,group=Method,color=Method)) + geom_line() + ggtitle("Medians Weight<sub>AUC=0</sub>, Weight<sub>ACC=1</sub> for Top 10 Methods across Networks")+scale_color_manual(values=pal)
+
+p1<-ggplotly(p)
+export(p1, file = "lineplot_Median_Top10_ACConly.pdf")
+```
+
+
+```{r plot 17, echo=FALSE}
+ggplotly(p) %>%  layout(autosize = F, width = 900, height = 500)
+```
+
+```{r lineplot 18, include=FALSE}
+
+#equal weights
+pattern<-"Combined_data_median_equal.csv"
+d1<-create_median_lineplot(pattern)
+p<-ggplot(d1, aes(x=Network, y=Median,group=Method,color=Method)) + geom_line() + ggtitle("Medians Weight<sub>AUC=0.5</sub>, Weight<sub>ACC=0.5</sub> for Top 10 Methods across Networks")+scale_color_manual(values=pal)
+
+p1<-ggplotly(p)
+export(p1, file = "lineplot_Median_Top10_equal.pdf")
+```
+
+
+```{r plot 18, echo=FALSE}
+ggplotly(p) %>%  layout(autosize = F, width = 900, height = 500)
+```
+
+```{r lineplot 19, include=FALSE}
+
+#AUC=0.3, ACC=0.7 weights
+pattern<-"Combined_data_median_37.csv"
+d1<-create_median_lineplot(pattern)
+p<-ggplot(d1, aes(x=Network, y=Median,group=Method,color=Method)) + geom_line() + ggtitle("Medians Weight<sub>AUC=0.3</sub>, Weight<sub>ACC=0.7</sub> for Top 10 Methods across Networks")+scale_color_manual(values=pal)
+p1<-ggplotly(p)
+export(p1, file = "lineplot_Median_Top10_37.pdf")
+
+
+```
+
+
+```{r plot 19, echo=FALSE}
+ggplotly(p) %>%  layout(autosize = F, width = 900, height = 500)
+```
+
+```{r lineplot 20, include=FALSE}
+#AUC=0.7, ACC=0.3 weights
+pattern<-"Combined_data_median_73.csv"
+d1<-create_median_lineplot(pattern)
+p<-ggplot(d1, aes(x=Network, y=Median,group=Method,color=Method)) + geom_line() + ggtitle("Medians Weight<sub>AUC=0.7</sub>, Weight<sub>ACC=0.3</sub> for Top 10 Methods across Networks")+scale_color_manual(values=pal)
+p1<-ggplotly(p)
+export(p1, file = "lineplot_Median_Top10_73.pdf")
+```
+
+
+```{r plot 20,echo=FALSE}
+ggplotly(p) %>%  layout(autosize = F, width = 900, height = 500)
+```
