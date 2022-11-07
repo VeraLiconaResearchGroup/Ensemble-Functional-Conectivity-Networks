@@ -1,6 +1,9 @@
 # Individual and combined methods analysis
 
-This subfolder contains the code and data for analyzing the networks created by the 40 single methods inmplemented in MULAN and molecular biology biology methods 
+This subfolder contains the code and data for analyzing the networks created by the 40 single methods inmplemented in MULAN and molecular biology methods 
+
+
+The code to perform the analysis can be found in  `analysis.Rmd`. An rmarkdown .html file is also found within this folder (`analysis.html`)
 
 The `sim` subfolders contain the following files for each simulated network:
 
