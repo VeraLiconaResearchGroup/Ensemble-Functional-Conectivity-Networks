@@ -2,6 +2,8 @@
 
 This subfolder contains the code and data for analyzing the networks created by the top singleton methods and combinations of those methods. 
 
+The code to perform the analysis can be found in  `analysis.Rmd`. An rmarkdown .html file is also found within this folder (`analysis.html`)
+
 The `sim` subfolders contain the following files for each simulated network:
 
 - Combined_Data_onlyAUC.csv: the area under the reciever operating characteristic (AUROC, abbreviated here as AUC) values for each method for the 50 time series simulations of the network calculated by MULAN
